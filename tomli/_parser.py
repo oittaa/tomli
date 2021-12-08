@@ -55,7 +55,10 @@ class TOMLDecodeError(ValueError):
 
 def load(__fp: BinaryIO, *, parse_float: ParseFloat = float) -> dict[str, Any]:
     """Parse TOML from a binary file object."""
-    s = __fp.read().decode()
+    try:
+        s = __fp.read().decode()
+    except UnicodeDecodeError as err:
+        raise TOMLDecodeError(err) from None
     return loads(s, parse_float=parse_float)
 
 

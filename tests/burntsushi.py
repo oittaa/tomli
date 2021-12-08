@@ -1,10 +1,18 @@
 """Utilities for tests that are in the "burntsushi" format."""
 
 import datetime
-from typing import Any
+from typing import Any, Union
 
 import dateutil.parser
 import pytest
+
+BURNTSUSHI_MAPPING = {
+    "bool": "boolean",
+    "datetime": "offset datetime",
+    "datetime-local": "local datetime",
+    "date-local": "local date",
+    "time-local": "local time",
+}
 
 
 def convert(obj):  # noqa: C901
@@ -63,6 +71,41 @@ def normalize(d: dict) -> dict:
         else:
             pytest.fail("Burntsushi fixtures should be dicts/lists only")
     return normalized
+
+
+def normalize_burntsushi(val: Union[dict, list]) -> dict:
+    if isinstance(val, list):
+        normalized = {
+            "type": "array",
+            "value": [normalize_burntsushi(item) for item in val],
+        }
+    elif isinstance(val, dict):
+        normalized: Any = {}
+        if "type" in val and "value" in val:
+            if val["type"] == "float":
+                normalized = val.copy()
+                normalized["value"] = normalize_float_str(normalized["value"])
+            elif val["type"] in {"datetime", "datetime-local"}:
+                normalized = val.copy()
+                normalized["value"] = normalize_datetime_str(normalized["value"])
+            elif val["type"] in {"time-local"}:
+                normalized = val.copy()
+                normalized["value"] = normalize_time_str(normalized["value"])
+            else:
+                normalized = val
+            if val["type"] in BURNTSUSHI_MAPPING:
+                normalized["type"] = BURNTSUSHI_MAPPING[val["type"]]
+        else:
+            for k, v in val.items():
+                normalized[k] = normalize_burntsushi(v)
+    else:
+        pytest.fail("Burntsushi fixtures should be dicts/lists only")
+    return normalized
+
+
+def normalize_time_str(dt_str: str) -> str:
+    val = dateutil.parser.parse(dt_str).isoformat()
+    return val[val.find("T") + 1 :]
 
 
 def normalize_datetime_str(dt_str: str) -> str:
