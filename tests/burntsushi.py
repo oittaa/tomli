@@ -74,25 +74,21 @@ def normalize(d: dict) -> dict:
 
 
 def normalize_burntsushi(val: Union[dict, list]) -> dict:
+    normalized: dict[str, Any] = {}
     if isinstance(val, list):
         normalized = {
             "type": "array",
             "value": [normalize_burntsushi(item) for item in val],
         }
     elif isinstance(val, dict):
-        normalized: Any = {}
         if "type" in val and "value" in val:
+            normalized = val.copy()
             if val["type"] == "float":
-                normalized = val.copy()
                 normalized["value"] = normalize_float_str(normalized["value"])
-            elif val["type"] in {"datetime", "datetime-local"}:
-                normalized = val.copy()
+            elif val["type"] in {"datetime", "datetime-local"}:      
                 normalized["value"] = normalize_datetime_str(normalized["value"])
             elif val["type"] in {"time-local"}:
-                normalized = val.copy()
                 normalized["value"] = normalize_time_str(normalized["value"])
-            else:
-                normalized = val
             if val["type"] in BURNTSUSHI_MAPPING:
                 normalized["type"] = BURNTSUSHI_MAPPING[val["type"]]
         else:
